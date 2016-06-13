@@ -943,5 +943,16 @@ bool xp_data_bin(const char *fname, const void *data, int len, const char *fmode
 	return false;
 }
 
-
+//! Reads raw binary data
+bool im_data_bin(FILE *fp, void *_data, int *len)
+{
+	*len = file_size(fp);
+	int read = fread(_data, 1, *len, fp);
+	if (read != *len)
+	{
+		// lprintf(LOG_ERROR, "Expected %i bytes, got %i\n", *len, read);
+		return false;
+	}
+	return true;
+}
 // EOF
