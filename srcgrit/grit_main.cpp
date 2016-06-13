@@ -767,7 +767,14 @@ bool grit_load_shared_pal(GritRec *gr)
 
     GritShared *grs = gr->shared;
     char path[1024];
-    path_repl_ext(path, grs->dstPath, c_fileTypes[gr->fileType], MAXPATHLEN);
+    if (gr->fileType == GRIT_FTYPE_BIN)
+    {
+		path_repl_ext(path, grs->dstPath, "pal.bin", MAXPATHLEN);
+	}
+	else
+	{
+    	path_repl_ext(path, grs->dstPath, c_fileTypes[gr->fileType], MAXPATHLEN);
+	}
 
     if(file_exists(path))
     {
@@ -780,7 +787,33 @@ bool grit_load_shared_pal(GritRec *gr)
 	    grs->palRec.data = (BYTE*)malloc(512 * sizeof(char));
 	    memset(grs->palRec.data, 0, 512);
 	}
-	im_data_gas(fp, grs->symName, grs->palRec.data, &len, &chunk);
+
+	if (gr->fileType == GRIT_FTYPE_S)
+	{
+		im_data_gas(fp, grs->symName, grs->palRec.data, &len, &chunk);
+	}
+	else if (gr->fileType == GRIT_FTYPE_BIN)
+	{
+		im_data_bin(fp, grs->palRec.data, &len);
+
+		WORD* palGBA = (WORD*)grs->palRec.data;
+		RGBQUAD* palRGB = (RGBQUAD*)grs->palRec.data;
+
+		len /= 2;
+
+		// expand RGB555 to RGBA8888
+		for (int i=len; i >= 0; i--)
+		{
+			WORD rgb = palGBA[i];
+			palRGB[i].rgbBlue=  (BYTE)(( rgb     &31)*255/31);
+			palRGB[i].rgbGreen= (BYTE)(((rgb>> 5)&31)*255/31);
+			palRGB[i].rgbRed=   (BYTE)(((rgb>>10)&31)*255/31);
+			palRGB[i].rgbReserved= 0xFF;
+		}
+	}
+	else
+		lprintf(LOG_ERROR, "Can't read palette from this file type");
+
 	grs->palRec.width = 4;
 	grs->palRec.height = len;
     }
